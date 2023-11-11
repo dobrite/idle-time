@@ -9,9 +9,11 @@
       src="https://unpkg.com/htmx.org/dist/ext/ws.js"
       crossorigin="anonymous"
     ></script>
+    <title>{% block title %}idle-time{% endblock %}</title>
+    {% block head %}{% endblock %}
   </head>
   <body>
     <div hx-ext="ws" ws-connect="/ws"></div>
-    {{ name }}
+    <div id="stats">{% block stats %}{% endblock %}</div>
   </body>
 </html>

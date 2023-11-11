@@ -1,4 +1,4 @@
-use std::{borrow::Cow, net::SocketAddr, ops::ControlFlow, path::PathBuf};
+use std::{borrow::Cow, net::SocketAddr, ops::ControlFlow, path::PathBuf, sync::Arc};
 
 use askama::Template;
 use axum::{
@@ -8,10 +8,14 @@ use axum::{
     },
     response::IntoResponse,
     routing::get,
-    Router,
+    Extension, Router,
 };
 use axum_extra::TypedHeader;
 use futures::{sink::SinkExt, stream::StreamExt};
+use tokio::{
+    sync::Mutex,
+    time::{self, Duration},
+};
 use tower_http::{
     services::ServeDir,
     trace::{DefaultMakeSpan, TraceLayer},
@@ -20,9 +24,15 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Template)]
 #[template(path = "index.html")]
-struct IndexTemplate<'a> {
-    name: &'a str,
+struct IndexTemplate {}
+
+#[derive(Template)]
+#[template(path = "_stats.html")]
+struct StatsTemplate {
+    gold: u64,
 }
+
+type SharedState = Arc<Mutex<u64>>;
 
 #[tokio::main]
 async fn main() {
@@ -36,6 +46,17 @@ async fn main() {
 
     let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
 
+    let state: SharedState = Arc::new(Mutex::new(0));
+    let ticker_state = state.clone();
+
+    tokio::spawn(async move {
+        loop {
+            time::sleep(Duration::from_secs(1)).await;
+            let mut guard = ticker_state.lock().await;
+            *guard += 1;
+        }
+    });
+
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/", get(index_handler))
@@ -43,7 +64,8 @@ async fn main() {
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::default().include_headers(true)),
-        );
+        )
+        .layer(Extension(state));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
@@ -57,14 +79,15 @@ async fn main() {
     .unwrap();
 }
 
-async fn index_handler() -> IndexTemplate<'static> {
-    IndexTemplate { name: "yooo" }
+async fn index_handler() -> IndexTemplate {
+    IndexTemplate {}
 }
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    state: Extension<SharedState>,
 ) -> impl IntoResponse {
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
@@ -72,10 +95,10 @@ async fn ws_handler(
         String::from("Unknown browser")
     };
     println!("`{user_agent}` at {addr} connected.");
-    ws.on_upgrade(move |socket| handle_socket(socket, addr))
+    ws.on_upgrade(move |socket| handle_socket(socket, addr, state.clone()))
 }
 
-async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
+async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Extension<SharedState>) {
     if socket.send(Message::Ping(vec![1, 2, 3])).await.is_ok() {
         println!("Pinged {who}...");
     } else {
@@ -111,8 +134,13 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
     let mut send_task = tokio::spawn(async move {
         let n_msg = 20;
         for i in 0..n_msg {
+            let template = {
+                let guard = state.lock().await;
+                StatsTemplate { gold: *guard }
+            };
+
             if sender
-                .send(Message::Text(format!("Server message {i} ...")))
+                .send(Message::Text(template.render().unwrap()))
                 .await
                 .is_err()
             {
