@@ -15,7 +15,7 @@
   <body hx-boost="true">
     <div hx-ext="ws" ws-connect="/ws"></div>
     <div id="stats"></div>
-    <form action="/click" hx-swap="none" method="post">
+    <form action="/click" hx-swap="none" method="post" hx-push-url="false">
       <button>Submit</button>
     </form>
   </body>
