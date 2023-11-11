@@ -42,6 +42,7 @@ dependencies = [
 [[package]]
 name = "askama_axum"
 version = "0.3.0"
+source = "git+https://github.com/dobrite/askama_axum#398b21c50ee2e83c703727ca95d30dedd18ff6f1"
 dependencies = [
  "askama",
  "axum",

@@ -22,4 +22,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [patch.crates-io]
 # axum-htmx = { git = "https://github.com/robertwayne/axum-htmx" }
-askama_axum = { path = "../askama_axum" }
+askama_axum = { git = "https://github.com/dobrite/askama_axum" }
