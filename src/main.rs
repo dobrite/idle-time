@@ -1,5 +1,6 @@
 use std::{borrow::Cow, net::SocketAddr, ops::ControlFlow, path::PathBuf};
 
+use askama::Template;
 use axum::{
     extract::{
         connect_info::ConnectInfo,
@@ -17,6 +18,12 @@ use tower_http::{
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate<'a> {
+    name: &'a str,
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry()
@@ -31,6 +38,7 @@ async fn main() {
 
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
+        .route("/", get(index_handler))
         .route("/ws", get(ws_handler))
         .layer(
             TraceLayer::new_for_http()
@@ -47,6 +55,10 @@ async fn main() {
     )
     .await
     .unwrap();
+}
+
+async fn index_handler() -> IndexTemplate<'static> {
+    IndexTemplate { name: "yooo" }
 }
 
 async fn ws_handler(
@@ -183,4 +195,3 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
     }
     ControlFlow::Continue(())
 }
-
