@@ -2,6 +2,7 @@ use std::{borrow::Cow, net::SocketAddr, ops::ControlFlow, path::PathBuf, sync::A
 
 use askama::Template;
 use axum::{
+    debug_handler,
     extract::{
         connect_info::ConnectInfo,
         ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
@@ -80,10 +81,12 @@ async fn main() {
     .unwrap();
 }
 
+#[debug_handler]
 async fn index_handler() -> IndexTemplate {
     IndexTemplate {}
 }
 
+#[debug_handler]
 async fn click_handler(state: Extension<SharedState>) -> StatsTemplate {
     let mut guard = state.lock().await;
     *guard += 1;
@@ -91,6 +94,7 @@ async fn click_handler(state: Extension<SharedState>) -> StatsTemplate {
     StatsTemplate { gold: *guard }
 }
 
+#[debug_handler]
 async fn ws_handler(
     ws: WebSocketUpgrade,
     user_agent: Option<TypedHeader<headers::UserAgent>>,

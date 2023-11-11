@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 askama = { version = "0.12.1", features = ["with-axum"] }
 askama_axum = "0.3.0"
-axum = { git = "https://github.com/tokio-rs/axum", rev = "3ff45d9c96b5192af6b6ec26eb2a2bfcddd00d7d", features = ["ws"] }
+axum = { git = "https://github.com/tokio-rs/axum", rev = "3ff45d9c96b5192af6b6ec26eb2a2bfcddd00d7d", features = ["macros", "ws"] }
 axum-extra = { git = "https://github.com/tokio-rs/axum", rev = "3ff45d9c96b5192af6b6ec26eb2a2bfcddd00d7d", features = ["typed-header"] }
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
