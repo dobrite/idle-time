@@ -7,7 +7,7 @@ use axum::{
         ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
     Extension, Router,
 };
 use axum_extra::TypedHeader;
@@ -60,6 +60,7 @@ async fn main() {
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/", get(index_handler))
+        .route("/click", post(click_handler))
         .route("/ws", get(ws_handler))
         .layer(
             TraceLayer::new_for_http()
@@ -81,6 +82,13 @@ async fn main() {
 
 async fn index_handler() -> IndexTemplate {
     IndexTemplate {}
+}
+
+async fn click_handler(state: Extension<SharedState>) -> StatsTemplate {
+    let mut guard = state.lock().await;
+    *guard += 1;
+
+    StatsTemplate { gold: *guard }
 }
 
 async fn ws_handler(
