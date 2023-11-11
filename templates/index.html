@@ -14,7 +14,9 @@
   </head>
   <body>
     <div hx-ext="ws" ws-connect="/ws"></div>
-    <div id="stats">{% block stats %}{% endblock %}</div>
-    <button hx-post="/click" hx-swap="none" type="button">Click!</button>
+    <div id="stats"></div>
+    <form hx-boost="true" action="/click" hx-swap="none" method="post">
+      <button>Submit</button>
+    </form>
   </body>
 </html>
