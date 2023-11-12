@@ -1,11 +1,11 @@
-use std::{borrow::Cow, net::SocketAddr, ops::ControlFlow, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, sync::Arc};
 
 use askama::Template;
 use axum::{
     debug_handler,
     extract::{
         connect_info::ConnectInfo,
-        ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
+        ws::{Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
     routing::{get, post},
@@ -155,8 +155,7 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Extension<
     let (mut sender, mut receiver) = socket.split();
 
     let mut send_task = tokio::spawn(async move {
-        let n_msg = 20;
-        for i in 0..n_msg {
+        loop {
             let template = {
                 let guard = state.lock().await;
                 StatsTemplate { gold: *guard }
@@ -167,23 +166,13 @@ async fn handle_socket(mut socket: WebSocket, who: SocketAddr, state: Extension<
                 .await
                 .is_err()
             {
-                return i;
+                break
             }
 
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         }
 
-        println!("Sending close to {who}...");
-        if let Err(e) = sender
-            .send(Message::Close(Some(CloseFrame {
-                code: axum::extract::ws::close_code::NORMAL,
-                reason: Cow::from("Goodbye"),
-            })))
-            .await
-        {
-            println!("Could not send Close due to {e}, probably it is ok?");
-        }
-        n_msg
+        true
     });
 
     let mut recv_task = tokio::spawn(async move {
