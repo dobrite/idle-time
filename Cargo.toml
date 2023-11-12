@@ -13,6 +13,7 @@ axum-extra = { git = "https://github.com/tokio-rs/axum", rev = "3ff45d9c96b5192a
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 headers = "0.3"
+shuttle-runtime = { version = "0.32.0", default-features = false }
 tokio = { version = "1.0", features = ["full"] }
 tokio-macros = "2.2.0"
 tower-http = { version = "0.4.0", features = ["fs", "trace"] }

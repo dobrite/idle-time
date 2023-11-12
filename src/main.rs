@@ -35,8 +35,28 @@ struct StatsTemplate {
 
 type SharedState = Arc<Mutex<u64>>;
 
-#[tokio::main]
-async fn main() {
+pub struct CustomService {
+    router: Router,
+}
+
+#[shuttle_runtime::async_trait]
+impl shuttle_runtime::Service for CustomService {
+    async fn bind(mut self, addr: std::net::SocketAddr) -> Result<(), shuttle_runtime::Error> {
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        tracing::debug!("listening on {}", listener.local_addr().unwrap());
+        let _ = axum::serve(
+            listener,
+            self.router
+                .into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await;
+
+        Ok(())
+    }
+}
+
+#[shuttle_runtime::main]
+async fn main() -> Result<CustomService, shuttle_runtime::Error> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -58,7 +78,7 @@ async fn main() {
         }
     });
 
-    let app = Router::new()
+    let router = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/", get(index_handler))
         .route("/click", post(click_handler))
@@ -69,16 +89,7 @@ async fn main() {
         )
         .layer(Extension(state));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .await
-    .unwrap();
+    Ok(CustomService { router })
 }
 
 #[debug_handler]
